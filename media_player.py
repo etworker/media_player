@@ -17,6 +17,9 @@ usage example:
 
     # play with live url rtmp://192.168.0.191:1935/live1/
     python media_player.py --uri rtmp://192.168.0.191:1935/live1/
+
+    # play with live url rtmp://192.168.0.191:1935/live1/ and save to file out.avi
+    python media_player.py --uri rtmp://192.168.0.191:1935/live1/ --output out.avi
 """
 
 import cv2, os, sys, time, getopt
@@ -25,13 +28,15 @@ class media_player:
     def __init__(self):
         self.media_uri = 0
         self.is_full_screen = False
+        self.is_save = False
+        self.filename = "out.avi"
 
     def parse_args(self, argv):
         pyname = os.path.basename(argv[0])
-        usage = "%s -i <media_uri> [-f]" % pyname
+        usage = "%s -i <media_uri> [-f] [-o xxx.avi]" % pyname
         
         try:
-            opts, args = getopt.getopt(argv[1:],"hfi:",["help", "full", "uri="])
+            opts, args = getopt.getopt(argv[1:],"hfso:i:",["help", "full", "output=", "uri="])
         except getopt.GetoptError:
             print usage
             return False
@@ -47,9 +52,12 @@ class media_player:
                     self.media_uri = int(arg)
                 else:
                     self.media_uri = arg                    
+            elif opt in ("-o", "--output"):
+                self.is_save = True
+                self.filename = arg
             else:
                 pass
-        
+                
         return True
 
     def is_number(self, s):
@@ -71,8 +79,15 @@ class media_player:
         except Exception as e:
             print "can not read fps"
 
-        return fps                
+        return fps
 
+    # get media info: w,h,fps
+    def get_media_info(self, cap):
+        w = int(round(cap.get(3)))     # CV_CAP_PROP_FRAME_WIDTH
+        h = int(round(cap.get(4)))     # CV_CAP_PROP_FRAME_HEIGHT
+        fps = self.get_fps(cap)
+
+        return w,h,fps
 
     def play(self, uri=None):
         if uri is None:
@@ -86,13 +101,21 @@ class media_player:
             print "open media", media_uri, "failed"
             return
 
+        w,h,fps = self.get_media_info(cap)
+        print "media info: w=%d, h=%d, fps=%d" % (w,h,fps)
+
+        if self.is_save:
+            fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+            if fps == 0:
+                out = cv2.VideoWriter(self.filename, fourcc, 15, (w,h))
+            else:
+                out = cv2.VideoWriter(self.filename, fourcc, fps, (w,h))
+
         # get fps
         sleep_time = 0
-        if self.is_media_file(media_uri):
-            fps = self.get_fps(cap)
-            if fps > 0:
-                sleep_time = 1.0/fps
-                print "fps=%d, sleep_time=%.2f ms" % (round(fps), sleep_time*1000)
+        if self.is_media_file(media_uri) and (fps > 0):
+            sleep_time = 1.0/fps
+            print "fps=%d, sleep_time=%.2f ms" % (round(fps), sleep_time*1000)
         
         # window name
         wn = str(media_uri)
@@ -111,7 +134,7 @@ class media_player:
             if not ret:
                 print "no frame available, break here"
                 break
-            
+
             # ESC Key to quit
             k = cv2.waitKey(1) & 0xff
             if k == 27:
@@ -119,9 +142,13 @@ class media_player:
                 break
             elif k == ord('f'):
                 cv2.setWindowProperty(wn, 0, 1)
-                                        
+
+            # save to video file
+            if self.is_save:
+                out.write(frame)
+
             # show frame
-            cv2.imshow(wn,frame)         
+            cv2.imshow(wn,frame)
             
             # sleep for media file
             t = sleep_time - time.time() + t
@@ -129,6 +156,7 @@ class media_player:
                 time.sleep(t)
             
         # release opencv windows resources
+        out.release()
         cap.release()
         cv2.destroyAllWindows()
         
@@ -136,8 +164,8 @@ class media_player:
         
 def unit_test():
     # uri = 0                                     # local camera
-    uri = "hand3.mp4"                           # local media file
-    # uri = "rtmp://192.168.0.191:1935/live1/"    # live uri
+    # uri = "hand3.mp4"                           # local media file
+    uri = "rtmp://192.168.0.25:1935/live1/10003"    # live uri
 
     player = media_player()
     player.is_full_screen = False
