@@ -73,6 +73,7 @@ class media_player:
 
         return fps                
 
+
     def play(self, uri=None):
         if uri is None:
             media_uri = self.media_uri
@@ -96,8 +97,10 @@ class media_player:
         # window name
         wn = str(media_uri)
         if self.is_full_screen:
-            cv2.namedWindow(wn, cv2.WND_PROP_FULLSCREEN)
-            cv2.setWindowProperty(wn, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            # cv2.namedWindow(wn, cv2.WND_PROP_FULLSCREEN)
+            # cv2.setWindowProperty(wn, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.namedWindow(wn, 0)
+            cv2.setWindowProperty(wn, 0, 1)
 
         # repeat read frame
         while(cap.isOpened()):
@@ -110,10 +113,12 @@ class media_player:
                 break
             
             # ESC Key to quit
-            k = cv2.waitKey(1)
+            k = cv2.waitKey(1) & 0xff
             if k == 27:
                 print "quit"
                 break
+            elif k == ord('f'):
+                cv2.setWindowProperty(wn, 0, 1)
                                         
             # show frame
             cv2.imshow(wn,frame)         

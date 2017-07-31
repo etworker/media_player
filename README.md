@@ -1,8 +1,8 @@
 # media_player
 
-simple media player based on opencv
-support web camera / video file / live url
-press ESC key to quit playing
+- simple media player based on opencv.
+- support web camera / video file / live url.
+- press ESC key to quit playing
 
 ## usage example
 
