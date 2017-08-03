@@ -156,7 +156,9 @@ class media_player:
                 time.sleep(t)
             
         # release opencv windows resources
-        out.release()
+        if self.is_save:
+            out.release()
+            
         cap.release()
         cv2.destroyAllWindows()
         
